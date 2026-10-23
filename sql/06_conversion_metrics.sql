@@ -2,31 +2,47 @@
 -- Analysis end is exclusive: 2026-10-01 00:00:00.
 -- Synthetic dataset only; these metrics describe this dataset, not real-world performance.
 
--- 1) Application approval rate.
--- Denominator: applications with a final decision (approved or rejected).
--- Pending applications are excluded from the rate and reported separately.
+-- 1) Application approval rate as of the analysis cutoff.
+-- Denominator: applications with a final decision before the cutoff.
+-- Applications submitted before the cutoff but still pending at the cutoff are reported separately.
+WITH params AS (
+    SELECT TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive
+)
 SELECT
     COUNT(*) FILTER (
-        WHERE application_status IN ('approved', 'rejected')
+        WHERE a.application_status IN ('approved', 'rejected')
+          AND a.decision_at < p.analysis_end_exclusive
     ) AS decided_applications,
     COUNT(*) FILTER (
-        WHERE application_status = 'approved'
+        WHERE a.application_status = 'approved'
+          AND a.decision_at < p.analysis_end_exclusive
     ) AS approved_applications,
     COUNT(*) FILTER (
-        WHERE application_status = 'rejected'
+        WHERE a.application_status = 'rejected'
+          AND a.decision_at < p.analysis_end_exclusive
     ) AS rejected_applications,
     COUNT(*) FILTER (
-        WHERE application_status = 'pending'
-    ) AS pending_applications,
+        WHERE a.application_status = 'pending'
+           OR a.decision_at IS NULL
+           OR a.decision_at >= p.analysis_end_exclusive
+    ) AS pending_applications_as_of_cutoff,
     ROUND(
-        COUNT(*) FILTER (WHERE application_status = 'approved')::NUMERIC
+        COUNT(*) FILTER (
+            WHERE a.application_status = 'approved'
+              AND a.decision_at < p.analysis_end_exclusive
+        )::NUMERIC
         / NULLIF(
-            COUNT(*) FILTER (WHERE application_status IN ('approved', 'rejected')),
+            COUNT(*) FILTER (
+                WHERE a.application_status IN ('approved', 'rejected')
+                  AND a.decision_at < p.analysis_end_exclusive
+            ),
             0
         ),
         4
     ) AS approval_rate_among_decided_applications
-FROM card_applications;
+FROM card_applications a
+CROSS JOIN params p
+WHERE a.submitted_at < p.analysis_end_exclusive;
 
 
 -- 2) D30 card activation rate.
@@ -69,24 +85,29 @@ SELECT
 FROM card_activation_outcomes;
 
 
--- 3) Decision-time distribution among decided applications.
--- Pending applications have no observed decision time and are reported separately
--- in section 1 rather than being treated as zero-duration decisions.
+-- 3) Decision-time distribution among applications decided before the analysis cutoff.
+-- Pending applications have no observed decision time and are excluded.
+WITH params AS (
+    SELECT TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive
+)
 SELECT
     COUNT(*) AS decided_applications,
-    COUNT(*) FILTER (WHERE application_status = 'approved') AS approved_applications,
-    COUNT(*) FILTER (WHERE application_status = 'rejected') AS rejected_applications,
+    COUNT(*) FILTER (WHERE a.application_status = 'approved') AS approved_applications,
+    COUNT(*) FILTER (WHERE a.application_status = 'rejected') AS rejected_applications,
     ROUND(
-        AVG(EXTRACT(EPOCH FROM (decision_at - submitted_at)) / 3600.0)::NUMERIC,
+        AVG(EXTRACT(EPOCH FROM (a.decision_at - a.submitted_at)) / 3600.0)::NUMERIC,
         2
     ) AS avg_hours_to_decision,
     ROUND(
         PERCENTILE_CONT(0.5) WITHIN GROUP (
-            ORDER BY EXTRACT(EPOCH FROM (decision_at - submitted_at)) / 3600.0
+            ORDER BY EXTRACT(EPOCH FROM (a.decision_at - a.submitted_at)) / 3600.0
         )::NUMERIC,
         2
     ) AS median_hours_to_decision
-FROM card_applications
-WHERE application_status IN ('approved', 'rejected')
-  AND decision_at IS NOT NULL
-  AND decision_at >= submitted_at;
+FROM card_applications a
+CROSS JOIN params p
+WHERE a.application_status IN ('approved', 'rejected')
+  AND a.submitted_at < p.analysis_end_exclusive
+  AND a.decision_at < p.analysis_end_exclusive
+  AND a.decision_at IS NOT NULL
+  AND a.decision_at >= a.submitted_at;
