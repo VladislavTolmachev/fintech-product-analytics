@@ -6,8 +6,7 @@
 -- This file contains three result sets: card-level detail, D30 summary, and a data-quality check.
 
 WITH params AS (
-    SELECT
-        TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive
+    SELECT TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive
 ),
 first_purchase_after_activation AS (
     SELECT
@@ -23,6 +22,7 @@ first_purchase_after_activation AS (
      AND t.transaction_at >= c.activated_at
      AND t.transaction_at < p.analysis_end_exclusive
     WHERE c.activated_at IS NOT NULL
+      AND c.activated_at < p.analysis_end_exclusive
     GROUP BY c.card_id, c.activated_at
 )
 SELECT
@@ -74,14 +74,18 @@ SELECT
         4
     ) AS d30_purchase_conversion_rate,
     ROUND(
-        AVG(EXTRACT(EPOCH FROM (first_purchase_at - activated_at)) / 3600.0)
-            FILTER (WHERE first_purchase_at IS NOT NULL)::NUMERIC,
+        (
+            AVG(EXTRACT(EPOCH FROM (first_purchase_at - activated_at)) / 3600.0)
+            FILTER (WHERE first_purchase_at IS NOT NULL)
+        )::NUMERIC,
         2
     ) AS avg_hours_to_first_purchase_among_d30_converters,
     ROUND(
-        PERCENTILE_CONT(0.5) WITHIN GROUP (
-            ORDER BY EXTRACT(EPOCH FROM (first_purchase_at - activated_at)) / 3600.0
-        ) FILTER (WHERE first_purchase_at IS NOT NULL)::NUMERIC,
+        (
+            PERCENTILE_CONT(0.5) WITHIN GROUP (
+                ORDER BY EXTRACT(EPOCH FROM (first_purchase_at - activated_at)) / 3600.0
+            ) FILTER (WHERE first_purchase_at IS NOT NULL)
+        )::NUMERIC,
         2
     ) AS median_hours_to_first_purchase_among_d30_converters
 FROM first_purchase_d30;
