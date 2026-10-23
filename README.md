@@ -28,7 +28,7 @@ Signup dates span Jan 2025–Jun 2026. Events are generated through Sep 2026. Al
 - `data/generate_synthetic_data.py` — deterministic synthetic-data generator
 - `data/generated/*.csv` — generated tables
 - `sql/00_schema.sql` — PostgreSQL schema
-- `sql/00_load_synthetic_data.sql` — CSV loading with psql `\\copy`
+- `sql/00_load_synthetic_data.sql` — CSV loading with psql `\copy`
 - `sql/01_data_quality.sql` — integrity and consistency checks
 - `sql/02_funnel_analysis.sql` — 90-day user-level funnel
 - `sql/03_activation_and_first_transaction.sql` — card-level activation and first-purchase analysis
@@ -53,7 +53,7 @@ psql -d fintech_analytics -f sql/05_segmentation.sql
 psql -d fintech_analytics -f sql/06_conversion_metrics.sql
 ```
 
-The load script uses psql-specific `\\copy` commands. Run it from the repository root so the relative CSV paths resolve.
+The load script uses psql-specific `\copy` commands. Run it from the repository root so the relative CSV paths resolve.
 
 ## Validation status
 - Synthetic CSV generation, schema creation and CSV loading completed successfully in the latest recorded CI attempt.
