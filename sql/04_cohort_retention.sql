@@ -1,11 +1,15 @@
 -- Monthly in-app retention by signup cohort.
--- The analysis window is [2025-01-01, 2026-10-01): all events before
--- 2026-10-01 are included, including fractional seconds on September 30.
+-- The analysis end is exclusive: all events before 2026-10-01 are included,
+-- including fractional seconds on September 30.
 -- Month 0 is the signup calendar month; month_index >= 1 measures later months.
-WITH params AS (
+WITH raw_params AS (
+    SELECT TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive
+),
+params AS (
     SELECT
-        TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive,
-        DATE '2026-09-01' AS last_activity_month
+        analysis_end_exclusive,
+        DATE_TRUNC('month', analysis_end_exclusive - INTERVAL '1 microsecond')::DATE AS last_activity_month
+    FROM raw_params
 ),
 user_cohorts AS (
     SELECT
