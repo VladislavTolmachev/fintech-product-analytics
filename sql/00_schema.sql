@@ -60,6 +60,5 @@ CREATE TABLE user_events (
 
 CREATE INDEX idx_applications_user ON card_applications(user_id);
 CREATE INDEX idx_applications_submitted ON card_applications(submitted_at);
-CREATE INDEX idx_cards_application ON cards(application_id);
 CREATE INDEX idx_transactions_card_time ON transactions(card_id, transaction_at);
 CREATE INDEX idx_events_user_time ON user_events(user_id, event_time);
