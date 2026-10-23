@@ -163,3 +163,81 @@ FROM transactions
 UNION ALL
 SELECT 'user_events.event_time', MIN(event_time), MAX(event_time)
 FROM user_events;
+
+
+-- 18) Fail the script if any critical integrity, sequence, taxonomy, or time-bound check fails.
+-- This makes the file suitable for automated validation with psql -v ON_ERROR_STOP=1.
+DO $$
+DECLARE
+    violation_count BIGINT;
+BEGIN
+    SELECT
+        (SELECT COUNT(*) FROM (
+            SELECT user_id FROM users GROUP BY user_id HAVING COUNT(*) > 1
+        ) q)
+      + (SELECT COUNT(*) FROM (
+            SELECT application_id FROM card_applications GROUP BY application_id HAVING COUNT(*) > 1
+        ) q)
+      + (SELECT COUNT(*) FROM (
+            SELECT card_id FROM cards GROUP BY card_id HAVING COUNT(*) > 1
+        ) q)
+      + (SELECT COUNT(*) FROM (
+            SELECT transaction_id FROM transactions GROUP BY transaction_id HAVING COUNT(*) > 1
+        ) q)
+      + (SELECT COUNT(*) FROM (
+            SELECT event_id FROM user_events GROUP BY event_id HAVING COUNT(*) > 1
+        ) q)
+      + (SELECT COUNT(*) FROM card_applications a JOIN users u USING (user_id)
+          WHERE a.submitted_at < u.signup_at)
+      + (SELECT COUNT(*) FROM card_applications
+          WHERE decision_at IS NOT NULL AND decision_at < submitted_at)
+      + (SELECT COUNT(*) FROM card_applications
+          WHERE (application_status = 'pending' AND decision_at IS NOT NULL)
+             OR (application_status IN ('approved', 'rejected') AND decision_at IS NULL))
+      + (SELECT COUNT(*) FROM card_applications a LEFT JOIN users u USING (user_id)
+          WHERE u.user_id IS NULL)
+      + (SELECT COUNT(*) FROM cards c LEFT JOIN card_applications a USING (application_id)
+          WHERE a.application_id IS NULL OR a.application_status <> 'approved')
+      + (SELECT COUNT(*) FROM cards c JOIN card_applications a USING (application_id)
+          WHERE c.issued_at < a.decision_at)
+      + (SELECT COUNT(*) FROM cards
+          WHERE activated_at IS NOT NULL AND activated_at < issued_at)
+      + (SELECT COUNT(*) FROM cards
+          WHERE (card_status = 'issued' AND activated_at IS NOT NULL)
+             OR (card_status IN ('active', 'blocked', 'closed') AND activated_at IS NULL))
+      + (SELECT COUNT(*) FROM transactions t LEFT JOIN cards c USING (card_id)
+          WHERE c.card_id IS NULL)
+      + (SELECT COUNT(*) FROM transactions t JOIN cards c USING (card_id)
+          WHERE t.transaction_at < c.issued_at)
+      + (SELECT COUNT(*) FROM transactions t JOIN cards c USING (card_id)
+          WHERE c.activated_at IS NOT NULL AND t.transaction_at < c.activated_at)
+      + (SELECT COUNT(*) FROM transactions WHERE amount <= 0)
+      + (SELECT COUNT(*) FROM user_events e LEFT JOIN users u USING (user_id)
+          WHERE u.user_id IS NULL)
+      + (SELECT COUNT(*) FROM user_events e JOIN users u USING (user_id)
+          WHERE e.event_time < u.signup_at)
+      + (SELECT COUNT(*) FROM user_events
+          WHERE event_name NOT IN (
+              'app_open', 'home_view', 'card_screen_view', 'transaction_history_view',
+              'profile_view', 'payment_attempt', 'settings_view'
+          ))
+      + (SELECT COUNT(*) FROM (
+            SELECT signup_at AS ts FROM users
+            UNION ALL SELECT submitted_at FROM card_applications
+            UNION ALL SELECT decision_at FROM card_applications
+            UNION ALL SELECT issued_at FROM cards
+            UNION ALL SELECT activated_at FROM cards
+            UNION ALL SELECT transaction_at FROM transactions
+            UNION ALL SELECT event_time FROM user_events
+        ) all_timestamps
+        WHERE ts IS NOT NULL
+          AND (ts < TIMESTAMP '2025-01-01 00:00:00'
+               OR ts >= TIMESTAMP '2026-10-01 00:00:00')
+    INTO violation_count;
+
+    IF violation_count > 0 THEN
+        RAISE EXCEPTION 'Data quality assertion failed: % violation(s) found', violation_count;
+    END IF;
+
+    RAISE NOTICE 'Data quality assertions passed: no violations found';
+END $$;
