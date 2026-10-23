@@ -3,11 +3,21 @@
 -- These checks complement schema constraints; they do not replace them.
 -- If a constraint rejects bad data during loading, the load may fail before this file runs.
 
--- 1) Duplicate user IDs. The primary key should already prevent these.
-SELECT user_id, COUNT(*) AS row_count
-FROM users
-GROUP BY user_id
-HAVING COUNT(*) > 1;
+-- 1) Duplicate primary keys. Primary-key constraints should already prevent these.
+SELECT 'users' AS table_name, user_id::TEXT AS id, COUNT(*) AS row_count
+FROM users GROUP BY user_id HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'card_applications', application_id::TEXT, COUNT(*)
+FROM card_applications GROUP BY application_id HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'cards', card_id::TEXT, COUNT(*)
+FROM cards GROUP BY card_id HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'transactions', transaction_id::TEXT, COUNT(*)
+FROM transactions GROUP BY transaction_id HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'user_events', event_id::TEXT, COUNT(*)
+FROM user_events GROUP BY event_id HAVING COUNT(*) > 1;
 
 -- 2) Applications submitted before the user registered.
 SELECT a.application_id, a.user_id, u.signup_at, a.submitted_at
@@ -99,10 +109,46 @@ SELECT transaction_id, amount
 FROM transactions
 WHERE amount <= 0;
 
--- 16) Timestamp bounds check against the documented synthetic observation period.
--- Expected bounds: signup/application/card data begins no earlier than 2025-01-01;
--- transaction/event activity ends before 2026-10-01 00:00:00.
--- Review returned rows rather than assuming every future dataset must share these bounds.
+-- 16) Timestamp-bound violations against the documented synthetic data period.
+-- Expected period: [2025-01-01 00:00:00, 2026-10-01 00:00:00).
+SELECT 'users.signup_at' AS field_name, user_id::TEXT AS record_id, signup_at AS offending_timestamp
+FROM users
+WHERE signup_at < TIMESTAMP '2025-01-01 00:00:00'
+   OR signup_at >= TIMESTAMP '2026-10-01 00:00:00'
+UNION ALL
+SELECT 'applications.submitted_at', application_id::TEXT, submitted_at
+FROM card_applications
+WHERE submitted_at < TIMESTAMP '2025-01-01 00:00:00'
+   OR submitted_at >= TIMESTAMP '2026-10-01 00:00:00'
+UNION ALL
+SELECT 'applications.decision_at', application_id::TEXT, decision_at
+FROM card_applications
+WHERE decision_at IS NOT NULL
+  AND (decision_at < TIMESTAMP '2025-01-01 00:00:00'
+       OR decision_at >= TIMESTAMP '2026-10-01 00:00:00')
+UNION ALL
+SELECT 'cards.issued_at', card_id::TEXT, issued_at
+FROM cards
+WHERE issued_at < TIMESTAMP '2025-01-01 00:00:00'
+   OR issued_at >= TIMESTAMP '2026-10-01 00:00:00'
+UNION ALL
+SELECT 'cards.activated_at', card_id::TEXT, activated_at
+FROM cards
+WHERE activated_at IS NOT NULL
+  AND (activated_at < TIMESTAMP '2025-01-01 00:00:00'
+       OR activated_at >= TIMESTAMP '2026-10-01 00:00:00')
+UNION ALL
+SELECT 'transactions.transaction_at', transaction_id::TEXT, transaction_at
+FROM transactions
+WHERE transaction_at < TIMESTAMP '2025-01-01 00:00:00'
+   OR transaction_at >= TIMESTAMP '2026-10-01 00:00:00'
+UNION ALL
+SELECT 'user_events.event_time', event_id::TEXT, event_time
+FROM user_events
+WHERE event_time < TIMESTAMP '2025-01-01 00:00:00'
+   OR event_time >= TIMESTAMP '2026-10-01 00:00:00';
+
+-- 17) Non-failing distribution summary for quick inspection (expected to return five rows).
 SELECT 'users.signup_at' AS field_name, MIN(signup_at) AS min_value, MAX(signup_at) AS max_value
 FROM users
 UNION ALL
