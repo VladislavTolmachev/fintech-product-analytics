@@ -20,6 +20,8 @@ Generated reproducibly with seed `20261023`.
 
 Signup dates span Jan 2025–Jun 2026. Events are generated through Sep 2026. All records are synthetic.
 
+**Important modeling limitation:** user sessions are generated at random points across the available follow-up period, and transactions are randomly distributed from activation to the data end. As a result, retention and time-to-first-purchase patterns are artifacts of the generator, not realistic behavioral estimates. Use this dataset to demonstrate SQL methods and metric definitions, not to claim real product insights. Timestamps are timezone-naive and assume one consistent fictional product timezone.
+
 ## Repository layout
 - `business_problem.md` — business context, hypotheses and analytical approach
 - `data/data_dictionary.md` — tables, fields and definitions
