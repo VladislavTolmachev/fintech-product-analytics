@@ -35,6 +35,7 @@ Signup dates span Jan 2025–Jun 2026. Events are generated through Sep 2026. Al
 - `sql/04_cohort_retention.sql` — monthly cohort retention
 - `sql/05_segmentation.sql` — acquisition-channel segmentation
 - `sql/06_conversion_metrics.sql` — decision, issuance and timing metrics
+- `.github/workflows/sql-validation.yml` — PostgreSQL CI run for schema, CSV loading, QA assertions and all analysis scripts
 
 ## Run locally (PostgreSQL)
 From the project root:
@@ -67,9 +68,9 @@ The load script uses psql-specific `\copy` commands. Run it from the repository 
 - Retention is measured by active users relative to the signup cohort.
 
 ## Next steps
-1. Execute the scripts in PostgreSQL.
-2. Review all QA outputs and resolve any failures.
-3. Add actual query outputs, evidence-based findings and product recommendations.
+1. Review the result of the `SQL validation` GitHub Actions workflow and resolve any failures.
+2. Review QA outputs and confirm that all assertions pass.
+3. Add query outputs, evidence-based findings and product recommendations, while clearly labeling the generator's behavioral limitations.
 4. Only then promote the project to `main`.
 
 See `business_problem.md` and the `sql/` directory for the detailed case.
