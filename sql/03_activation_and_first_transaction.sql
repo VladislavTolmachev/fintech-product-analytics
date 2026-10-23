@@ -7,8 +7,7 @@
 
 WITH params AS (
     SELECT
-        TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive,
-        INTERVAL '30 days' AS d30_window
+        TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive
 ),
 first_purchase_after_activation AS (
     SELECT
@@ -43,16 +42,14 @@ ORDER BY hours_to_first_purchase NULLS LAST, card_id;
 -- D30 conversion and time-to-first-purchase among cards with a complete 30-day
 -- observation window. Cards without a successful purchase remain in the denominator.
 WITH params AS (
-    SELECT
-        TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive,
-        INTERVAL '30 days' AS d30_window
+    SELECT TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive
 ),
 eligible_cards AS (
     SELECT c.card_id, c.activated_at
     FROM cards c
     CROSS JOIN params p
     WHERE c.activated_at IS NOT NULL
-      AND c.activated_at + p.d30_window <= p.analysis_end_exclusive
+      AND c.activated_at + INTERVAL '30 days' <= p.analysis_end_exclusive
 ),
 first_purchase_d30 AS (
     SELECT
@@ -67,30 +64,27 @@ first_purchase_d30 AS (
      AND t.transaction_at >= ec.activated_at
      AND t.transaction_at < ec.activated_at + INTERVAL '30 days'
     GROUP BY ec.card_id, ec.activated_at
-),
-metrics AS (
-    SELECT
-        COUNT(*) AS eligible_activated_cards,
-        COUNT(*) FILTER (WHERE first_purchase_at IS NOT NULL) AS cards_with_purchase_d30,
-        EXTRACT(EPOCH FROM (first_purchase_at - activated_at)) / 3600.0
-            AS hours_to_first_purchase
-    FROM first_purchase_d30
 )
 SELECT
-    eligible_activated_cards,
-    cards_with_purchase_d30,
+    COUNT(*) AS eligible_activated_cards,
+    COUNT(*) FILTER (WHERE first_purchase_at IS NOT NULL) AS cards_with_purchase_d30,
     ROUND(
-        cards_with_purchase_d30::NUMERIC
-        / NULLIF(eligible_activated_cards, 0),
+        COUNT(*) FILTER (WHERE first_purchase_at IS NOT NULL)::NUMERIC
+        / NULLIF(COUNT(*), 0),
         4
     ) AS d30_purchase_conversion_rate,
-    ROUND(AVG(hours_to_first_purchase)::NUMERIC, 2)
-        AS avg_hours_to_first_purchase_among_d30_converters,
     ROUND(
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY hours_to_first_purchase)::NUMERIC,
+        AVG(EXTRACT(EPOCH FROM (first_purchase_at - activated_at)) / 3600.0)
+            FILTER (WHERE first_purchase_at IS NOT NULL)::NUMERIC,
+        2
+    ) AS avg_hours_to_first_purchase_among_d30_converters,
+    ROUND(
+        PERCENTILE_CONT(0.5) WITHIN GROUP (
+            ORDER BY EXTRACT(EPOCH FROM (first_purchase_at - activated_at)) / 3600.0
+        ) FILTER (WHERE first_purchase_at IS NOT NULL)::NUMERIC,
         2
     ) AS median_hours_to_first_purchase_among_d30_converters
-FROM metrics;
+FROM first_purchase_d30;
 
 
 -- Data-quality check: successful purchases timestamped before card activation.
