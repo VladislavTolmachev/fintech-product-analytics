@@ -1,7 +1,10 @@
 -- Monthly in-app retention by signup cohort.
 -- The analysis end is exclusive: all events before 2026-10-01 are included,
 -- including fractional seconds on September 30.
--- Month 0 is the signup calendar month; month_index >= 1 measures later months.
+-- Month 0 is the signup calendar month and can be below 100%: it measures the share
+-- of the cohort with at least one tracked event after signup in that calendar month.
+-- Month_index >= 1 measures activity in subsequent calendar months; this is a
+-- calendar-month activity rate, not a strict day-30/day-60 retention definition.
 WITH raw_params AS (
     SELECT TIMESTAMP '2026-10-01 00:00:00' AS analysis_end_exclusive
 ),
