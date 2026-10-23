@@ -240,4 +240,4 @@ BEGIN
     END IF;
 
     RAISE NOTICE 'Data quality assertions passed: no violations found';
-END $$;
+END; $;
