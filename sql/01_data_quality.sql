@@ -232,7 +232,7 @@ BEGIN
         ) all_timestamps
         WHERE ts IS NOT NULL
           AND (ts < TIMESTAMP '2025-01-01 00:00:00'
-               OR ts >= TIMESTAMP '2026-10-01 00:00:00')
+               OR ts >= TIMESTAMP '2026-10-01 00:00:00'))
     INTO violation_count;
 
     IF violation_count > 0 THEN
