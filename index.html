@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fintech Product Analytics — Portfolio Case</title>
+<style>
+:root{color-scheme:dark;--bg:#10151d;--panel:#192230;--text:#edf3fb;--muted:#a9b6c8;--accent:#69d2bd;--line:#2c394a}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(140deg,#10151d,#172838);color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1000px;margin:auto;padding:48px 22px 72px}.tag{display:inline-block;color:var(--accent);border:1px solid #32675f;border-radius:99px;padding:5px 12px;font-size:13px;letter-spacing:.04em}
+h1{font-size:clamp(2rem,5vw,3.8rem);line-height:1.08;max-width:800px;margin:20px 0}h2{margin-top:42px;font-size:1.5rem}p{color:var(--muted);max-width:800px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:28px 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}.num{font-size:1.8rem;font-weight:750;color:var(--accent)}.label{color:var(--muted);font-size:.9rem}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:14px}.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.step{padding:14px;border-radius:10px;background:#202d3c;border:1px solid var(--line)}.step b{display:block}.step small{color:var(--muted)}a{color:var(--accent)}li{margin:7px 0}footer{border-top:1px solid var(--line);margin-top:44px;padding-top:20px;color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body><main>
+<span class="tag">PORTFOLIO CASE STUDY · PRODUCT ANALYTICS</span>
+<h1>Fintech Product Analytics</h1>
+<p>Credit card activation, first-purchase conversion and retention — a hands-on SQL case built with reproducible synthetic data. Designed to demonstrate the workflow of a junior product analyst, from business questions to metric definitions and data-quality checks.</p>
+<div class="grid">
+<div class="card"><div class="num">5,000</div><div class="label">synthetic users</div></div>
+<div class="card"><div class="num">3,333</div><div class="label">card applications</div></div>
+<div class="card"><div class="num">1,777</div><div class="label">issued cards</div></div>
+<div class="card"><div class="num">15,310</div><div class="label">transactions</div></div>
+<div class="card"><div class="num">74,518</div><div class="label">user events</div></div>
+</div>
+<h2>Questions this project investigates</h2>
+<div class="panel"><ol>
+<li>Where does conversion drop across signup, application, approval, issuance, activation and first purchase?</li>
+<li>How long does it take an activated card to make its first successful purchase?</li>
+<li>How does monthly retention evolve across signup cohorts?</li>
+<li>Which acquisition channels show different downstream conversion patterns?</li>
+<li>Which metrics would help a product team prioritize improvements?</li>
+</ol></div>
+<h2>Analytical workflow</h2>
+<div class="steps">
+<div class="step"><b>01 · Model</b><small>PostgreSQL schema</small></div>
+<div class="step"><b>02 · Validate</b><small>Data-quality checks</small></div>
+<div class="step"><b>03 · Measure</b><small>Funnel & activation</small></div>
+<div class="step"><b>04 · Retain</b><small>Cohort analysis</small></div>
+<div class="step"><b>05 · Compare</b><small>Channel segments</small></div>
+</div>
+<h2>Project files</h2>
+<div class="panel">
+<ul>
+<li><a href="README.md">README — setup and project status</a></li>
+<li><a href="business_problem.md">Business problem and hypotheses</a></li>
+<li><a href="data/data_dictionary.md">Data dictionary</a></li>
+<li><a href="data/generate_synthetic_data.py">Synthetic data generator (Python)</a></li>
+<li><a href="sql/00_schema.sql">PostgreSQL schema</a></li>
+<li><a href="sql/01_data_quality.sql">Data-quality checks</a></li>
+<li><a href="sql/02_funnel_analysis.sql">Funnel analysis</a></li>
+<li><a href="sql/03_activation_and_first_transaction.sql">Activation and first purchase</a></li>
+<li><a href="sql/04_cohort_retention.sql">Cohort retention</a></li>
+<li><a href="sql/05_segmentation.sql">Acquisition-channel segmentation</a></li>
+<li><a href="sql/06_conversion_metrics.sql">Conversion metrics</a></li>
+</ul>
+</div>
+<h2>Validation status</h2>
+<div class="panel"><p style="margin-top:0">Synthetic CSV generation and referential/time-order checks passed locally. SQL scripts have not yet been executed in PostgreSQL, so final findings and product recommendations are deliberately pending. No unverified business conclusions are presented.</p><p>Session timing and transaction timing are simplified by the generator; retention and purchase-latency patterns are illustrative artifacts, not realistic product estimates.</p><p style="margin-bottom:0"><b>Important:</b> all data is synthetic and this independent exercise does not use or represent Plata's internal data.</p></div>
+<footer>Independent learning project · SQL · PostgreSQL · Product analytics</footer>
+</main></body></html>

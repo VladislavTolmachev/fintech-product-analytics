@@ -1,0 +1,73 @@
+name: SQL validation
+
+on:
+  push:
+    branches:
+      - project-preview
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Generate deterministic synthetic data
+        run: python data/generate_synthetic_data.py
+
+      - name: Create project database
+        run: psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE fintech_analytics;"
+
+      - name: Create schema
+        run: psql -h 127.0.0.1 -U postgres -d fintech_analytics -v ON_ERROR_STOP=1 -f sql/00_schema.sql
+
+      - name: Load CSV data and reset identity sequences
+        run: psql -h 127.0.0.1 -U postgres -d fintech_analytics -v ON_ERROR_STOP=1 -f sql/00_load_synthetic_data.sql
+
+      - name: Run data-quality checks and assertions
+        run: psql -h 127.0.0.1 -U postgres -d fintech_analytics -v ON_ERROR_STOP=1 -f sql/01_data_quality.sql
+
+      - name: Run funnel analysis
+        run: psql -h 127.0.0.1 -U postgres -d fintech_analytics -v ON_ERROR_STOP=1 -f sql/02_funnel_analysis.sql
+
+      - name: Run activation and first-purchase analysis
+        run: psql -h 127.0.0.1 -U postgres -d fintech_analytics -v ON_ERROR_STOP=1 -f sql/03_activation_and_first_transaction.sql
+
+      - name: Run cohort retention analysis
+        run: psql -h 127.0.0.1 -U postgres -d fintech_analytics -v ON_ERROR_STOP=1 -f sql/04_cohort_retention.sql
+
+      - name: Run acquisition-channel segmentation
+        run: psql -h 127.0.0.1 -U postgres -d fintech_analytics -v ON_ERROR_STOP=1 -f sql/05_segmentation.sql
+
+      - name: Run conversion metrics
+        run: psql -h 127.0.0.1 -U postgres -d fintech_analytics -v ON_ERROR_STOP=1 -f sql/06_conversion_metrics.sql
